@@ -11,7 +11,7 @@ const MessagingDashboard = ({ darkMode }) => {
   // Load messages from API
   const loadMessages = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/messages?limit=5');
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/messages?limit=5`);
       const data = await response.json();
       
       console.log('API Response:', data); // Debug log to see what we're getting
@@ -47,7 +47,7 @@ const MessagingDashboard = ({ darkMode }) => {
     setLoading(true);
     try {
       // Send message to API
-      const response = await fetch('http://localhost:5000/api/messages', {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/messages`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -86,7 +86,7 @@ const MessagingDashboard = ({ darkMode }) => {
         
         // Also try to broadcast the notification
         try {
-          await fetch('http://localhost:5000/api/notifications/broadcast', {
+          await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/notifications/broadcast`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

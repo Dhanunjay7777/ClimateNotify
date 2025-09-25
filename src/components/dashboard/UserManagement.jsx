@@ -32,7 +32,7 @@ const UserManagement = ({ darkMode }) => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:5000/api/consumers', {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/consumers`, {
         headers: {
           'Authorization': `Bearer ${user?.id || 'admin-token'}`,
           'Content-Type': 'application/json'
@@ -64,7 +64,7 @@ const UserManagement = ({ darkMode }) => {
   // Update user status/role
   const updateUser = async (userId, updates) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/consumers/${userId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/consumers/${userId}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${user?.id || 'admin-token'}`,
@@ -103,7 +103,7 @@ const UserManagement = ({ darkMode }) => {
     setAddUserError(null);
 
     try {
-      const response = await fetch('http://localhost:5000/api/admin/create-user', {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/admin/create-user`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${user?.id || 'admin-token'}`,
