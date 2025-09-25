@@ -9,9 +9,8 @@ lerna-debug.log*
 .env
 .env.local
 .env.production
-# server/
-# backend/
-src/
+server/
+backend/
 node_modules
 dist
 dist-ssr
