@@ -5,7 +5,6 @@ import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import DashboardPage from './pages/DashboardPage'
-import APIValidator from './components/APIValidator'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import './App.css'
 
@@ -22,7 +21,6 @@ function App() {
               <DashboardPage />
             </ProtectedRoute>
           } />
-          <Route path="/api-test" element={<APIValidator />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
