@@ -1,0 +1,389 @@
+@import "tailwindcss";
+@import "./styles/animations.css";
+
+/* Reset and base styles */
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  font-family: 'Aptos', 'Aptos Display', 'Segoe UI Variable', 'Segoe UI', -apple-system, BlinkMacSystemFont, system-ui, ui-sans-serif, 'Helvetica Neue', Arial, sans-serif;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  font-variant-ligatures: common-ligatures;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  line-height: 1.5;
+  letter-spacing: -0.015em;
+  color: #1f2937;
+  background-color: #ffffff;
+  font-size: 13px; /* DeepSeek-style smaller base font */
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+/* Remove default button and input styling */
+button, input, textarea, select {
+  font-family: inherit;
+}
+
+/* Ensure full width containers */
+.w-full {
+  width: 100% !important;
+}
+
+.min-h-screen {
+  min-height: 100vh !important;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Dark mode scrollbar */
+.dark ::-webkit-scrollbar-track {
+  background: #374151;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #6b7280;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+/* Text clamp utility */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Animation for smooth transitions */
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Focus styles */
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Dark mode support for form elements */
+.dark input,
+.dark textarea,
+.dark select {
+  color-scheme: dark;
+}
+
+/* Dark mode focus ring */
+.dark button:focus-visible,
+.dark input:focus-visible,
+.dark textarea:focus-visible,
+.dark select:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: 2px;
+}
+
+/* Loading animation */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Pulse animation */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Hide scrollbar for mobile */
+@media (max-width: 768px) {
+  .overflow-y-auto {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  
+  .overflow-y-auto::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Ensure responsive design */
+/* DeepSeek-style typography with smaller sizes */
+.text-refined {
+  font-weight: 400;
+  letter-spacing: -0.015em;
+  line-height: 1.5;
+  font-size: 12px;
+}
+
+.text-refined-medium {
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1.4;
+  font-size: 13px;
+}
+
+.text-refined-semibold {
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.3;
+  font-size: 14px;
+}
+
+.text-refined-bold {
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+  font-size: 15px;
+}
+
+/* Enhanced heading styles - smaller DeepSeek sizes */
+h1 {
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+  font-size: 20px;
+}
+
+h2 {
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.25;
+  font-size: 18px;
+}
+
+h3 {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+  font-size: 16px;
+}
+
+h4 {
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.35;
+  font-size: 14px;
+}
+
+h5, h6 {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.4;
+  font-size: 13px;
+}
+
+/* Enhanced body text - smaller sizes */
+p {
+  line-height: 1.6;
+  letter-spacing: -0.01em;
+  font-size: 13px;
+}
+
+span, div {
+  line-height: 1.5;
+  letter-spacing: -0.01em;
+  font-size: inherit;
+}
+
+/* Button text improvements - smaller */
+button {
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  font-size: 13px;
+}
+
+/* Input text improvements - smaller */
+input, select, textarea {
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  font-size: 13px;
+}
+
+/* Label styles */
+label {
+  font-weight: 500;
+  font-size: 12px;
+  letter-spacing: -0.01em;
+}
+
+/* Responsive sidebar utilities */
+.sidebar-collapsed {
+  width: 4rem; /* 16 in Tailwind */
+}
+
+.sidebar-expanded {
+  width: 16rem; /* 64 in Tailwind */
+}
+
+/* Smooth content transitions */
+.content-transition {
+  transition: margin-left 300ms ease-in-out, padding-left 300ms ease-in-out;
+}
+
+/* Prevent content shifting on mobile */
+@media (max-width: 1023px) {
+  .mobile-content {
+    margin-left: 0 !important;
+    padding-left: 0 !important;
+  }
+  
+  /* Ensure sidebar appears above content on mobile */
+  .mobile-sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    background-color: rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* Desktop sidebar behavior */
+@media (min-width: 1024px) {
+  .desktop-content-collapsed {
+    margin-left: 4rem;
+  }
+  
+  .desktop-content-expanded {
+    margin-left: 16rem;
+  }
+  
+  /* Ensure smooth sidebar transitions */
+  .sidebar-desktop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 30;
+  }
+}
+
+/* Mobile optimizations */
+@media (max-width: 640px) {
+  /* Touch-friendly padding */
+  .px-4 {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+  
+  .py-4 {
+    padding-top: 1rem !important;
+    padding-bottom: 1rem !important;
+  }
+  
+  /* Larger tap targets for mobile */
+  button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Better text sizing on mobile - DeepSeek style */
+  h1 {
+    font-size: 18px !important;
+    line-height: 1.2;
+  }
+  
+  h2 {
+    font-size: 16px !important;
+    line-height: 1.3;
+  }
+  
+  h3 {
+    font-size: 15px !important;
+    line-height: 1.4;
+  }
+  
+  /* Improved form elements */
+  input, select, textarea {
+    min-height: 44px;
+    font-size: 14px !important; /* Larger for mobile, prevent zoom on iOS */
+  }
+  
+  button {
+    font-size: 14px !important;
+  }
+  
+  p, span {
+    font-size: 12px !important;
+  }
+  
+  label {
+    font-size: 11px !important;
+  }
+  
+  /* Better spacing for mobile cards */
+  .rounded-2xl {
+    border-radius: 1rem !important;
+    margin-bottom: 1rem;
+  }
+  
+  /* Mobile sidebar improvements */
+  .sidebar-mobile {
+    width: 100vw;
+    max-width: 16rem;
+  }
+}
+
+/* Tablet optimizations */
+@media (min-width: 641px) and (max-width: 1024px) {
+  /* Improved grid spacing for tablets */
+  .gap-6 {
+    gap: 1rem !important;
+  }
+  
+  .gap-8 {
+    gap: 1.5rem !important;
+  }
+}
