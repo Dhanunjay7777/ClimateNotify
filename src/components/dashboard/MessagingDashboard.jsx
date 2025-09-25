@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 
 const MessagingDashboard = ({ darkMode }) => {
@@ -7,6 +7,65 @@ const MessagingDashboard = ({ darkMode }) => {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const textareaRef = useRef(null);
+  const emojiPickerRef = useRef(null);
+
+  // Emoji categories
+  const emojiCategories = {
+    climate: {
+      name: 'Climate & Weather',
+      emojis: ['🌍', '🌎', '🌏', '🌡️', '🌤️', '⛅', '🌦️', '🌧️', '⛈️', '🌩️', '🌨️', '❄️', '☀️', '🌞', '🌝', '🌛', '🌜', '🌚', '🌕', '🌖', '🌗', '🌘', '🌑', '🌒', '🌓', '🌔', '🔥', '💧', '🌊', '❗', '⚡']
+    },
+    nature: {
+      name: 'Nature & Plants',
+      emojis: ['🌱', '🌲', '🌳', '🌴', '🌵', '🌿', '☘️', '🍀', '🌾', '🌻', '🌺', '🌸', '🌼', '🌷', '🏔️', '⛰️', '🗻', '🌋', '🏕️', '🏞️']
+    },
+    alerts: {
+      name: 'Alerts & Warnings',
+      emojis: ['🚨', '⚠️', '❗', '❌', '✅', '🔔', '📢', '📣', '🆘', '🚯', '⛔', '🔴', '🟠', '🟡', '🔵', '🟢', '🟣']
+    },
+    reactions: {
+      name: 'Reactions',
+      emojis: ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳']
+    },
+    objects: {
+      name: 'Objects & Symbols',
+      emojis: ['📱', '💻', '📊', '📈', '📉', '🔍', '🔎', '📝', '📋', '📌', '📍', '🗂️', '📁', '📄', '📃', '📑', '📊', '💡', '🔋', '⚙️', '🛠️', '🔧', '🔨', '⏰', '⏱️', '⏲️', '🕐', '📅', '📆']
+    }
+  };
+
+  // Handle emoji insertion
+  const insertEmoji = (emoji) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const newMessage = message.substring(0, start) + emoji + message.substring(end);
+    
+    setMessage(newMessage);
+    
+    // Reset cursor position after emoji
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + emoji.length, start + emoji.length);
+    }, 0);
+  };
+
+  // Close emoji picker when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target)) {
+        setShowEmojiPicker(false);
+      }
+    };
+
+    if (showEmojiPicker) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showEmojiPicker]);
 
   // Load messages from API
   const loadMessages = async () => {
@@ -191,18 +250,95 @@ const MessagingDashboard = ({ darkMode }) => {
               <form onSubmit={handleSendMessage} className="space-y-6">
                 <div>
                   <label className={`block text-sm font-medium mb-3 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Message Content</label>
-                  <textarea
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    placeholder="Type your notification message here..."
-                    className={`w-full px-4 py-4 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-lg transition-colors ${
-                      darkMode 
-                        ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
-                        : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500'
-                    }`}
-                    rows="6"
-                    required
-                  />
+                  <div className="relative">
+                    <textarea
+                      ref={textareaRef}
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
+                      placeholder="Type your notification message here"
+                      className={`w-full px-4 py-4 pr-16 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-lg transition-colors ${
+                        darkMode 
+                          ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
+                          : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500'
+                      }`}
+                      rows="6"
+                      required
+                    />
+                    
+                    {/* Emoji Button */}
+                    <button
+                      type="button"
+                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                      className={`absolute bottom-4 right-4 w-10 h-10 rounded-lg flex items-center justify-center transition-all hover:scale-105 ${
+                        showEmojiPicker
+                          ? 'bg-blue-500 text-white shadow-lg'
+                          : darkMode 
+                            ? 'bg-gray-600 text-gray-300 hover:bg-gray-500' 
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      😊
+                    </button>
+
+                    {/* Emoji Picker */}
+                    {showEmojiPicker && (
+                      <div 
+                        ref={emojiPickerRef}
+                        className={`absolute top-full mt-2 right-0 w-80 max-h-96 overflow-y-auto rounded-xl border shadow-xl z-10 ${
+                          darkMode 
+                            ? 'bg-gray-800 border-gray-700' 
+                            : 'bg-white border-gray-200'
+                        }`}
+                      >
+                        <div className={`p-4 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                          <h3 className={`font-semibold text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                            Add Emojis to your message
+                          </h3>
+                        </div>
+                        
+                        <div className="p-4 space-y-4">
+                          {Object.entries(emojiCategories).map(([key, category]) => (
+                            <div key={key}>
+                              <h4 className={`text-xs font-medium mb-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                                {category.name}
+                              </h4>
+                              <div className="grid grid-cols-8 gap-2">
+                                {category.emojis.map((emoji, index) => (
+                                  <button
+                                    key={index}
+                                    type="button"
+                                    onClick={() => insertEmoji(emoji)}
+                                    className={`w-8 h-8 text-xl flex items-center justify-center rounded-lg hover:scale-110 transition-all ${
+                                      darkMode 
+                                        ? 'hover:bg-gray-700' 
+                                        : 'hover:bg-gray-100'
+                                    }`}
+                                    title={emoji}
+                                  >
+                                    {emoji}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        
+                        <div className={`p-3 border-t text-center ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                          <button
+                            type="button"
+                            onClick={() => setShowEmojiPicker(false)}
+                            className={`text-xs px-3 py-1 rounded-lg ${
+                              darkMode 
+                                ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' 
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            }`}
+                          >
+                            Close
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                   <div className="flex justify-between items-center mt-3">
                     <p className={`text-sm ${message.length > 200 ? 'text-red-500' : darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                       Characters: {message.length}/200 {message.length > 200 && '⚠️ Too long!'}
@@ -249,13 +385,15 @@ const MessagingDashboard = ({ darkMode }) => {
                 }`}>
                   <ul className="space-y-1">
                     <li>• Keep messages concise and engaging</li>
-                    <li>• Use emojis to increase engagement</li>
+                    <li>• Use emojis 😊 to increase engagement</li>
+                    <li>• Try climate emojis: 🌍 🌡️ ⛈️ ❄️</li>
                     <li>• Personalize when possible</li>
                   </ul>
                   <ul className="space-y-1">
                     <li>• Test notifications before sending</li>
                     <li>• Avoid sending too frequently</li>
                     <li>• Include clear call-to-actions</li>
+                    <li>• Click 😊 button for emoji picker</li>
                   </ul>
                 </div>
               </div>
