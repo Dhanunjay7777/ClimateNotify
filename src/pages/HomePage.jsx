@@ -7,6 +7,7 @@ const HomePage = () => {
   const [openFaq, setOpenFaq] = React.useState(null);
   const [email, setEmail] = React.useState('');
   const [showBackToTop, setShowBackToTop] = React.useState(false);
+  const [showDemoModal, setShowDemoModal] = React.useState(false);
   
   const toggleFaq = (index) => {
     setOpenFaq(openFaq === index ? null : index);
@@ -22,6 +23,46 @@ const HomePage = () => {
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  const handleWatchDemo = () => {
+    setShowDemoModal(true);
+  };
+
+  const closeDemoModal = () => {
+    setShowDemoModal(false);
+  };
+
+  React.useEffect(() => {
+    // Load Storylane script
+    if (!document.querySelector('script[src="https://js.storylane.io/js/v2/storylane.js"]')) {
+      const script = document.createElement('script');
+      script.src = 'https://js.storylane.io/js/v2/storylane.js';
+      script.async = true;
+      document.head.appendChild(script);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    // Handle escape key to close modal
+    const handleEscape = (e) => {
+      if (e.key === 'Escape' && showDemoModal) {
+        setShowDemoModal(false);
+      }
+    };
+
+    if (showDemoModal) {
+      document.addEventListener('keydown', handleEscape);
+      // Prevent body scroll when modal is open
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'unset';
+    };
+  }, [showDemoModal]);
 
   React.useEffect(() => {
     const handleScroll = () => {
@@ -108,7 +149,10 @@ const HomePage = () => {
 
               {/* Video Demo Button */}
               <div className="flex justify-center mb-8 animate-fade-in-up">
-                <button className="group flex items-center space-x-2 px-5 py-3 bg-white border border-gray-200 rounded-full text-base text-gray-600 hover:text-gray-900 hover:shadow-lg transition-all duration-300">
+                <button 
+                  onClick={handleWatchDemo}
+                  className="group flex items-center space-x-2 px-5 py-3 bg-white border border-gray-200 rounded-full text-base text-gray-600 hover:text-gray-900 hover:shadow-lg transition-all duration-300 cursor-pointer"
+                >
                   <div className="w-10 h-10 bg-black rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
                     <svg className="w-4 h-4 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M8 5v14l11-7z"/>
@@ -428,6 +472,76 @@ const HomePage = () => {
             </div>
           ))}
         </div>
+
+        {/* Demo Modal Overlay */}
+        {showDemoModal && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+            {/* Backdrop */}
+            <div 
+              className="absolute inset-0 bg-black bg-opacity-75 backdrop-blur-sm"
+              onClick={closeDemoModal}
+            ></div>
+            
+            {/* Modal Content */}
+            <div className="relative w-full max-w-6xl mx-4 bg-white rounded-lg shadow-2xl overflow-hidden animate-fade-in">
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-4 border-b border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900">ClimateNotify Demo</h3>
+                <button
+                  onClick={closeDemoModal}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200"
+                >
+                  <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              {/* Storylane Embed */}
+              <div className="relative bg-gray-50">
+                <div 
+                  className="sl-embed" 
+                  style={{
+                    position: 'relative',
+                    paddingBottom: 'calc(47.46% + 25px)',
+                    width: '100%',
+                    height: 0,
+                    transform: 'scale(1)'
+                  }}
+                >
+                  <iframe 
+                    loading="lazy" 
+                    className="sl-demo" 
+                    src="https://app.storylane.io/demo/jtltrr2cra95?embed=inline" 
+                    name="sl-embed" 
+                    allowFullScreen 
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      border: '1px solid rgba(63,95,172,0.35)',
+                      boxShadow: '0px 0px 18px rgba(26, 19, 72, 0.15)',
+                      borderRadius: '10px',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+              </div>
+              
+              {/* Modal Footer */}
+              <div className="p-4 bg-gray-50 border-t border-gray-200 text-center">
+                <p className="text-sm text-gray-600">
+                  Interactive demo - Experience all ClimateNotify features
+                </p>
+                <p className="text-xs text-gray-400 mt-1">
+                  Press ESC to close or click outside the modal
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );
