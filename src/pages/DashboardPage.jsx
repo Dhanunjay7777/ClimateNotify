@@ -10,6 +10,7 @@ import UserManagement from '../components/dashboard/UserManagement';
 import ReportsSection from '../components/dashboard/ReportsSection';
 import SettingsPage from '../components/dashboard/SettingsPage';
 import MessagingDashboard from '../components/dashboard/MessagingDashboard';
+import ServicesManagement from '../components/dashboard/ServicesManagement';
 
 const DashboardPage = () => {
   const { user, logout } = useAuth();
@@ -66,6 +67,7 @@ const DashboardPage = () => {
   // Admin-only menu items
   const adminMenuItems = [
     { id: 'users', name: 'User Management', icon: 'groups', description: 'Manage users & permissions' },
+    { id: 'services', name: 'Services Management', icon: 'cloud', description: 'Manage Render services' },
   ];
 
   // Combine menu items based on user role
@@ -89,6 +91,9 @@ const DashboardPage = () => {
       
       case 'users':
         return <UserManagement darkMode={darkMode} />;
+      
+      case 'services':
+        return <ServicesManagement darkMode={darkMode} />;
       
       case 'reports':
         return <ReportsSection darkMode={darkMode} />;
