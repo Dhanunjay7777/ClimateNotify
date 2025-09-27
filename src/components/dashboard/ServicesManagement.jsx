@@ -37,7 +37,7 @@ const ServicesManagement = ({ darkMode }) => {
   }
 
   const getAuthToken = () => {
-    return user?.id || 'admin-token';
+    return user?.consumerID || 'admin-token';
   };
 
   const fetchServices = async () => {

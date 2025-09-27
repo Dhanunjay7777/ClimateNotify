@@ -1,11 +1,87 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../context/AuthContext';
+import { generateClimateReport } from '../../services/reportService';
+import reportService from '../../services/reportService';
 
 const ReportsSection = ({ darkMode }) => {
+  const { user } = useAuth();
   const [selectedPeriod, setSelectedPeriod] = useState('monthly');
   const [reportType, setReportType] = useState('comprehensive');
   const [selectedRegion, setSelectedRegion] = useState('global');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [recentReports, setRecentReports] = useState([]);
+  const [reportMetrics, setReportMetrics] = useState({
+    totalReports: 0,
+    downloads: 0,
+    scheduled: 0,
+    avgSize: '0 KB'
+  });
+  const [includeCharts, setIncludeCharts] = useState(true);
+  const [includeRawData, setIncludeRawData] = useState(true);
+  const [generationProgress, setGenerationProgress] = useState('');
+  const [consumerId, setConsumerId] = useState(null);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isAdmin, setIsAdmin] = useState(null); // null = checking, false = not admin, true = admin
+  const [userInfo, setUserInfo] = useState(null);
 
-  const periods = [
+  // Helper function to convert blob to base64
+  const blobToBase64 = (blob) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  };
+
+  // Check admin access directly from localStorage
+  const checkAdminAccess = () => {
+    try {
+      const sessionUser = localStorage.getItem('climatenotify_user');
+      if (!sessionUser) {
+        return false;
+      }
+      
+      const userData = JSON.parse(sessionUser);
+      return userData.accessLevel === 'admin';
+    } catch (error) {
+      console.error('Error checking admin access:', error);
+      return false;
+    }
+  };
+
+  // Initialize admin status from localStorage
+  const initializeAdminStatus = () => {
+    try {
+      const sessionUser = localStorage.getItem('climatenotify_user');
+      if (!sessionUser) {
+        setIsAdmin(false);
+        setUserInfo(null);
+        return;
+      }
+      
+      const userData = JSON.parse(sessionUser);
+      const consumerID = userData.consumerID || userData.id;
+      const hasAdminAccess = userData.accessLevel === 'admin';
+      
+      setUserInfo(userData);
+      setIsAdmin(hasAdminAccess);
+      
+      if (hasAdminAccess && consumerID) {
+        setConsumerId(consumerID);
+      } else {
+        console.log('❌ User does not have admin access');
+      }
+      
+    } catch (error) {
+      console.error('Error initializing admin status:', error);
+      setIsAdmin(false);
+      setUserInfo(null);
+    }
+  };
+
+  // Show admin warning for non-admin users
+  const showAdminWarning = isAdmin === false;  const periods = [
     { value: 'daily', label: 'Daily Reports' },
     { value: 'weekly', label: 'Weekly Summary' },
     { value: 'monthly', label: 'Monthly Analysis' },
@@ -32,68 +108,391 @@ const ReportsSection = ({ darkMode }) => {
     { value: 'oceania', label: 'Oceania' }
   ];
 
-  const recentReports = [
-    {
-      id: 1,
-      title: 'Global Climate Analysis - January 2024',
-      type: 'Comprehensive',
-      period: 'Monthly',
-      region: 'Global',
-      generatedDate: '2024-01-15T09:00:00Z',
-      fileSize: '2.4 MB',
-      downloadCount: 127,
-      status: 'completed'
-    },
-    {
-      id: 2,
-      title: 'Extreme Weather Events - Q4 2023',
-      type: 'Extreme Weather',
-      period: 'Quarterly',
-      region: 'North America',
-      generatedDate: '2024-01-10T14:30:00Z',
-      fileSize: '1.8 MB',
-      downloadCount: 89,
-      status: 'completed'
-    },
-    {
-      id: 3,
-      title: 'Temperature Trends - Europe',
-      type: 'Temperature Analysis',
-      period: 'Weekly',
-      region: 'Europe',
-      generatedDate: '2024-01-14T11:15:00Z',
-      fileSize: '950 KB',
-      downloadCount: 43,
-      status: 'completed'
-    },
-    {
-      id: 4,
-      title: 'CO₂ Emissions Report - Asia Pacific',
-      type: 'CO₂ Emissions',
-      period: 'Monthly',
-      region: 'Asia',
-      generatedDate: '2024-01-12T16:45:00Z',
-      fileSize: '3.1 MB',
-      downloadCount: 201,
-      status: 'completed'
-    },
-    {
-      id: 5,
-      title: 'Alert Activity Summary - Daily',
-      type: 'Alert Activity',
-      period: 'Daily',
-      region: 'Global',
-      generatedDate: '2024-01-15T08:00:00Z',
-      fileSize: '456 KB',
-      downloadCount: 312,
-      status: 'generating'
-    }
-  ];
+  useEffect(() => {
+    initializeAdminStatus();
+    setupOnlineListener();
+  }, []);
 
-  const reportMetrics = [
+  useEffect(() => {
+    if (isAdmin === true || isAdmin === false) { // Allow both admin and non-admin to load reports
+      loadReports();
+      updateMetrics();
+      if (isAdmin === true) {
+        initializeDatabase();
+      }
+    }
+  }, [isAdmin]);
+
+  const initializeDatabase = async () => {
+    try {
+      // Get user data from localStorage
+      const sessionUser = localStorage.getItem('climatenotify_user');
+      
+      if (sessionUser) {
+        const userData = JSON.parse(sessionUser);
+        const userId = userData.consumerID;
+        const userAccessLevel = userData.accessLevel;
+        
+        if (userAccessLevel !== 'admin') {
+          // User is not admin, access denied for database operations
+          return;
+        }
+        
+        setConsumerId(userId);
+      } else {
+        // No user session found
+        return;
+      }
+    } catch (error) {
+      console.error('Database initialization failed:', error);
+      return;
+    }
+  };
+
+  const setupOnlineListener = () => {
+    const handleOnline = () => {
+      setIsOnline(true);
+    };
+    
+    const handleOffline = () => {
+      setIsOnline(false);
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOffline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  };
+
+  const saveToDatabase = async (reportData, fileData = null) => {
+    if (!consumerId) return false;
+
+    try {
+      const requestBody = {
+        reportData,
+        consumerId
+      };
+
+      // Add file data if provided
+      if (fileData) {
+        requestBody.fileData = fileData;
+      }
+
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/climate-reports`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Save request failed');
+      }
+
+      const result = await response.json();
+      return result.data;
+    } catch (error) {
+      console.error('❌ Failed to save to database:', error);
+      throw error;
+    }
+  };
+
+  const loadReports = async () => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/climate-reports`);
+      if (response.ok) {
+        const data = await response.json();
+        setRecentReports(data.data.reports || []);
+      }
+    } catch (error) {
+      console.error('Failed to load reports:', error);
+    }
+  };
+
+  const updateMetrics = async () => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/climate-reports`);
+      if (!response.ok) throw new Error('Failed to fetch reports');
+      const data = await response.json();
+      const reports = (data.data && data.data.reports) ? data.data.reports : [];
+
+      // Total downloads
+      const totalDownloads = reports.reduce((sum, report) => sum + (parseInt(report.downloadCount) || 0), 0);
+
+      // Average file size in MB
+      let avgSizeMB = 0;
+      if (reports.length > 0) {
+        const totalSizeKB = reports.reduce((sum, report) => {
+          const sizeStr = report.fileSize || '0 KB';
+          const match = sizeStr.match(/([\d.]+)\s*(KB|MB)/i);
+          if (match) {
+            const value = parseFloat(match[1]);
+            const unit = match[2].toUpperCase();
+            return sum + (unit === 'MB' ? value * 1024 : value);
+          }
+          return sum;
+        }, 0);
+        avgSizeMB = totalSizeKB / reports.length / 1024;
+      }
+
+      setReportMetrics({
+        totalReports: reports.length,
+        downloads: totalDownloads,
+        scheduled: reports.filter(r => r.status === 'scheduled').length,
+        avgSize: avgSizeMB > 0 ? `${avgSizeMB.toFixed(1)} MB` : '0 MB'
+      });
+    } catch (error) {
+      console.error('Failed to update metrics:', error);
+      setReportMetrics({
+        totalReports: 0,
+        downloads: 0,
+        scheduled: 0,
+        avgSize: '0 MB'
+      });
+    }
+  };
+
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 KB';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  };
+
+  const handleGenerateReport = async () => {
+    if (isGenerating) {
+      alert('A report is already being generated. Please wait.');
+      return;
+    }
+
+    // Allow all users to generate reports, admin check is only for saving
+    // if (!checkAdminAccess()) {
+    //   alert('Access denied. Only admin users can generate climate reports.');
+    //   return;
+    // }
+
+    setIsGenerating(true);
+    setGenerationProgress('Initializing...');
+    
+    try {
+      const selectedRegionData = regions.find(r => r.value === selectedRegion);
+      
+      const reportConfig = {
+        type: reportType,
+        period: selectedPeriod,
+        region: selectedRegion,
+        includeCharts,
+        includeRawData
+      };
+
+      setGenerationProgress('Fetching climate data...');
+      const reportData = await generateClimateReport(reportConfig);
+
+      setGenerationProgress('Generating PDF...');
+
+      // Convert blob to base64 for upload
+      let fileData = null;
+      if (reportData.blob) {
+        fileData = await blobToBase64(reportData.blob);
+      }
+
+      const reportToSave = {
+        title: `${reportTypes.find(t => t.value === reportType)?.label} - ${new Date().toLocaleDateString()}`,
+        type: reportType,
+        period: selectedPeriod,
+        region: selectedRegion,
+        generatedDate: new Date().toISOString(),
+        fileSize: reportData.fileSize || '0 KB',
+        downloadCount: 0,
+        status: 'completed',
+        fileUrl: reportData.downloadUrl || '',
+        isPublic: false
+      };
+
+      setGenerationProgress('Saving report...');
+
+      // Save directly to database with file data (only for admin users)
+      if (consumerId && isAdmin === true) {
+        const savedReport = await saveToDatabase(reportToSave, fileData);
+        if (savedReport) {
+          // Reload reports to show the new one
+          await loadReports();
+        }
+      } else {
+        // For non-admin users, just show success message without saving
+        alert('Report generated successfully! Note: Reports are not saved for non-admin users.');
+      }
+      
+      updateMetrics();
+
+      setGenerationProgress('');
+      
+      if (reportData.isMockData) {
+        alert('Report generated successfully using demo data!');
+      } else {
+        alert('Report generated successfully with real weather data!');
+      }
+      
+    } catch (error) {
+      console.error('Error generating report:', error);
+      setGenerationProgress('');
+      alert('Failed to generate report: ' + error.message);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // Update download count in database
+  const updateDownloadCount = async (reportId) => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/climate-reports/${reportId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          updateData: { downloadCount: 1 }, // Only update download count
+          consumerId: consumerId
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.warn('Failed to update download count in database:', errorData.message);
+        return false;
+      }
+
+      const result = await response.json();
+      return true;
+    } catch (error) {
+      console.warn('Error updating download count:', error);
+      return false;
+    }
+  };
+
+  const handleDownloadReport = async (report) => {
+    // Update download count in database for ALL report types
+    const updateSuccess = await updateDownloadCount(report.id);
+
+    if (report.blob) {
+      reportService.downloadReport(report.blob, report.fileName);
+
+      // Update local state only if API call was successful
+      if (updateSuccess) {
+        const updatedReports = recentReports.map(r =>
+          r.id === report.id ? { ...r, downloadCount: (parseInt(r.downloadCount) || 0) + 1 } : r
+        );
+        setRecentReports(updatedReports);
+        updateMetrics();
+      }
+    } else if (report.filePath) {
+      const link = document.createElement('a');
+      link.href = report.filePath;
+      link.download = report.fileName || `${report.title}.pdf`;
+      link.click();
+
+      // Update local state only if API call was successful
+      if (updateSuccess) {
+        const updatedReports = recentReports.map(r =>
+          r.id === report.id ? { ...r, downloadCount: (parseInt(r.downloadCount) || 0) + 1 } : r
+        );
+        setRecentReports(updatedReports);
+        updateMetrics();
+      }
+    } else if (report.fileUrl) {
+      // Handle Appwrite Storage URL
+      window.open(report.fileUrl, '_blank');
+
+      // Update local state only if API call was successful
+      if (updateSuccess) {
+        const updatedReports = recentReports.map(r =>
+          r.id === report.id ? { ...r, downloadCount: (parseInt(r.downloadCount) || 0) + 1 } : r
+        );
+        setRecentReports(updatedReports);
+        updateMetrics();
+      }
+    }
+  };
+
+  const handleDeleteReport = async (reportId) => {
+    try {
+      // Call DELETE API endpoint
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/climate-reports/${reportId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          consumerId: consumerId
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to delete report');
+      }
+
+      // Update local state only after successful API call
+      const updatedReports = recentReports.filter(r => r.id !== reportId);
+      setRecentReports(updatedReports);
+      updateMetrics();
+    } catch (error) {
+      console.error('❌ Failed to delete report:', error);
+      alert('Failed to delete report: ' + error.message);
+    }
+  };
+
+  const handleTemplateClick = (template) => {
+    setReportType(template.type);
+    setSelectedPeriod(template.period);
+    setSelectedRegion(template.region);
+  };
+
+  const shareReport = async (report) => {
+    try {
+      if (navigator.share) {
+        // Use Web Share API if available
+        await navigator.share({
+          title: report.title,
+          text: `Climate Report: ${report.title} (${report.type}) - Generated on ${formatDate(report.generatedDate)}`,
+          url: window.location.origin
+        });
+      } else {
+        // Fallback to clipboard
+        const shareText = `Climate Report: ${report.title}
+Type: ${report.type}
+Period: ${report.period}
+Region: ${report.region}
+Generated: ${formatDate(report.generatedDate)}
+Size: ${report.fileSize}
+
+View this report at: ${window.location.origin}`;
+        
+        await navigator.clipboard.writeText(shareText);
+        alert('Report details copied to clipboard!');
+      }
+    } catch (error) {
+      // Final fallback - create a shareable link
+      const shareUrl = `${window.location.origin}?report=${encodeURIComponent(report.title)}`;
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        alert('Share link copied to clipboard!');
+      } catch (clipboardError) {
+        alert(`Share this report: ${shareUrl}`);
+      }
+    }
+  };
+
+  const metricsData = [
     {
       title: 'Total Reports Generated',
-      value: '1,247',
+      value: reportMetrics.totalReports.toString(),
       change: '+23%',
       trend: 'up',
       icon: (
@@ -104,7 +503,7 @@ const ReportsSection = ({ darkMode }) => {
     },
     {
       title: 'Downloads This Month',
-      value: '4,892',
+      value: reportMetrics.downloads.toString(),
       change: '+45%',
       trend: 'up',
       icon: (
@@ -115,7 +514,7 @@ const ReportsSection = ({ darkMode }) => {
     },
     {
       title: 'Scheduled Reports',
-      value: '34',
+      value: reportMetrics.scheduled.toString(),
       change: '+8%',
       trend: 'up',
       icon: (
@@ -126,7 +525,7 @@ const ReportsSection = ({ darkMode }) => {
     },
     {
       title: 'Average File Size',
-      value: '1.8 MB',
+      value: reportMetrics.avgSize,
       change: '-5%',
       trend: 'down',
       icon: (
@@ -159,20 +558,44 @@ const ReportsSection = ({ darkMode }) => {
 
   return (
     <div className="space-y-8">
+      {/* Admin Warning for Non-Admin Users */}
+      {showAdminWarning && (
+        <div className={`p-4 rounded-lg border ${
+          darkMode ? 'bg-yellow-900/20 border-yellow-700 text-yellow-300' : 'bg-yellow-50 border-yellow-200 text-yellow-800'
+        }`}>
+          <div className="flex items-center">
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.99-.833-2.598 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+            <span className="font-medium">
+              Dear {userInfo?.fullname || 'User'}, you have limited access. You can view reports but cannot generate and delete them.
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className={`text-3xl font-bold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Reports & Analytics</h1>
           <p className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Generate and download climate data reports</p>
         </div>
-        <button className="mt-4 sm:mt-0 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium">
-          Generate New Report
+        <button 
+          onClick={handleGenerateReport}
+          disabled={isGenerating}
+          className={`mt-4 sm:mt-0 px-6 py-3 rounded-xl font-medium transition-colors ${
+            isGenerating 
+              ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
+              : 'bg-blue-600 text-white hover:bg-blue-700'
+          }`}
+        >
+          {isGenerating ? (generationProgress || 'Generating...') : 'Generate New Report'}
         </button>
       </div>
 
       {/* Metrics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        {reportMetrics.map((metric, index) => (
+        {metricsData.map((metric, index) => (
           <div key={index} className={`${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-2xl p-6 border hover:shadow-lg transition-all duration-200`}>
             <div className="flex items-center justify-between mb-4">
               <div className={`w-12 h-12 ${darkMode ? 'bg-blue-900/40 text-blue-400' : 'bg-blue-100 text-blue-600'} rounded-xl flex items-center justify-center`}>
@@ -256,16 +679,34 @@ const ReportsSection = ({ darkMode }) => {
         <div className="mt-6 flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <label className="flex items-center space-x-2">
-              <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" defaultChecked />
+              <input 
+                type="checkbox" 
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" 
+                checked={includeCharts}
+                onChange={(e) => setIncludeCharts(e.target.checked)}
+              />
               <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Include charts and visualizations</span>
             </label>
             <label className="flex items-center space-x-2">
-              <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" defaultChecked />
+              <input 
+                type="checkbox" 
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" 
+                checked={includeRawData}
+                onChange={(e) => setIncludeRawData(e.target.checked)}
+              />
               <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Include raw data export</span>
             </label>
           </div>
-          <button className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
-            Generate Report
+          <button 
+            onClick={handleGenerateReport}
+            disabled={isGenerating}
+            className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+              isGenerating 
+                ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
+                : 'bg-blue-600 text-white hover:bg-blue-700'
+            }`}
+          >
+            {isGenerating ? (generationProgress || 'Generating...') : 'Generate Report'}
           </button>
         </div>
       </div>
@@ -306,7 +747,14 @@ const ReportsSection = ({ darkMode }) => {
               </tr>
             </thead>
             <tbody className={`divide-y ${darkMode ? 'divide-gray-700' : 'divide-gray-100'}`}>
-              {recentReports.map(report => (
+              {recentReports.length === 0 ? (
+                <tr>
+                  <td colSpan="9" className={`py-8 px-6 text-center ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                    No reports generated yet. Click "Generate New Report" to create your first climate report.
+                  </td>
+                </tr>
+              ) : (
+                recentReports.map(report => (
                 <tr key={report.id} className={`transition-colors ${
                   darkMode ? 'hover:bg-gray-700/50' : 'hover:bg-gray-50'
                 }`}>
@@ -330,33 +778,48 @@ const ReportsSection = ({ darkMode }) => {
                     <div className="flex items-center space-x-2">
                       {report.status === 'completed' && (
                         <>
-                          <button className={`p-1 transition-colors ${
-                            darkMode ? 'text-gray-500 hover:text-blue-400' : 'text-gray-400 hover:text-blue-600'
-                          }`} title="Download">
+                          <button 
+                            onClick={() => handleDownloadReport(report)}
+                            className={`p-1 transition-colors ${
+                              darkMode ? 'text-gray-500 hover:text-blue-400' : 'text-gray-400 hover:text-blue-600'
+                            }`} 
+                            title="Download"
+                          >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
                           </button>
-                          <button className={`p-1 transition-colors ${
-                            darkMode ? 'text-gray-500 hover:text-green-400' : 'text-gray-400 hover:text-green-600'
-                          }`} title="Share">
+                          <button 
+                            onClick={() => shareReport(report)}
+                            className={`p-1 transition-colors ${
+                              darkMode ? 'text-gray-500 hover:text-green-400' : 'text-gray-400 hover:text-green-600'
+                            }`} 
+                            title="Share"
+                          >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
                             </svg>
                           </button>
+                          {isAdmin === true && (
+                            <button 
+                              onClick={() => handleDeleteReport(report.id)}
+                              className={`p-1 transition-colors ${
+                                darkMode ? 'text-gray-500 hover:text-red-400' : 'text-gray-400 hover:text-red-600'
+                              }`} 
+                              title="Delete"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          )}
                         </>
                       )}
-                      <button className={`p-1 transition-colors ${
-                        darkMode ? 'text-gray-500 hover:text-red-400' : 'text-gray-400 hover:text-red-600'
-                      }`} title="Delete">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
                     </div>
                   </td>
                 </tr>
-              ))}
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -371,9 +834,12 @@ const ReportsSection = ({ darkMode }) => {
         <h2 className={`text-xl font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Report Templates</h2>
         <p className={`mb-6 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Quick access to commonly used report configurations</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
-          <button className={`flex items-center space-x-3 p-4 rounded-xl hover:shadow-md transition-all duration-200 text-left ${
-            darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-white hover:bg-gray-50'
-          }`}>
+          <button 
+            onClick={() => handleTemplateClick({ type: 'comprehensive', period: 'monthly', region: 'global' })}
+            className={`flex items-center space-x-3 p-4 rounded-xl hover:shadow-md transition-all duration-200 text-left ${
+              darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-white hover:bg-gray-50'
+            }`}
+          >
             <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
               darkMode ? 'bg-blue-900/40 text-blue-400' : 'bg-blue-100 text-blue-600'
             }`}>
@@ -387,9 +853,12 @@ const ReportsSection = ({ darkMode }) => {
             </div>
           </button>
 
-          <button className={`flex items-center space-x-3 p-4 rounded-xl hover:shadow-md transition-all duration-200 text-left ${
-            darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-white hover:bg-gray-50'
-          }`}>
+          <button 
+            onClick={() => handleTemplateClick({ type: 'extreme', period: 'weekly', region: 'north_america' })}
+            className={`flex items-center space-x-3 p-4 rounded-xl hover:shadow-md transition-all duration-200 text-left ${
+              darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-white hover:bg-gray-50'
+            }`}
+          >
             <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
               darkMode ? 'bg-green-900/40 text-green-400' : 'bg-green-100 text-green-600'
             }`}>
@@ -403,9 +872,12 @@ const ReportsSection = ({ darkMode }) => {
             </div>
           </button>
 
-          <button className={`flex items-center space-x-3 p-4 rounded-xl hover:shadow-md transition-all duration-200 text-left ${
-            darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-white hover:bg-gray-50'
-          }`}>
+          <button 
+            onClick={() => handleTemplateClick({ type: 'temperature', period: 'yearly', region: 'europe' })}
+            className={`flex items-center space-x-3 p-4 rounded-xl hover:shadow-md transition-all duration-200 text-left ${
+              darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-white hover:bg-gray-50'
+            }`}
+          >
             <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
               darkMode ? 'bg-purple-900/40 text-purple-400' : 'bg-purple-100 text-purple-600'
             }`}>

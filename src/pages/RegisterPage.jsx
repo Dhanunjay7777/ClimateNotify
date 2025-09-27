@@ -89,8 +89,6 @@ const RegisterPage = () => {
 
       if (response.ok && data.status === 'success') {
         setSuccessMessage(data.message);
-        console.log('✅ Account created successfully:', data.data);
-        
         // Reset form
         setFormData({
           fullname: '',
