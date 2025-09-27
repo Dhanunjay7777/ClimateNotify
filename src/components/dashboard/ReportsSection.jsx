@@ -203,7 +203,7 @@ const ReportsSection = ({ darkMode }) => {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
           <div>
             <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Report Type</label>
-            <select 
+            <select
               value={reportType}
               onChange={(e) => setReportType(e.target.value)}
               className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
@@ -217,10 +217,10 @@ const ReportsSection = ({ darkMode }) => {
               ))}
             </select>
           </div>
-          
+
           <div>
             <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Time Period</label>
-            <select 
+            <select
               value={selectedPeriod}
               onChange={(e) => setSelectedPeriod(e.target.value)}
               className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
@@ -234,10 +234,10 @@ const ReportsSection = ({ darkMode }) => {
               ))}
             </select>
           </div>
-          
+
           <div>
             <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Region</label>
-            <select 
+            <select
               value={selectedRegion}
               onChange={(e) => setSelectedRegion(e.target.value)}
               className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
@@ -252,7 +252,7 @@ const ReportsSection = ({ darkMode }) => {
             </select>
           </div>
         </div>
-        
+
         <div className="mt-6 flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <label className="flex items-center space-x-2">
@@ -289,7 +289,7 @@ const ReportsSection = ({ darkMode }) => {
             </div>
           </div>
         </div>
-        
+
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className={darkMode ? 'bg-gray-700/50' : 'bg-gray-50'}>
@@ -364,8 +364,8 @@ const ReportsSection = ({ darkMode }) => {
 
       {/* Report Templates */}
       <div className={`${
-        darkMode 
-          ? 'bg-gradient-to-r from-purple-900/30 to-indigo-900/30 border-purple-700/50' 
+        darkMode
+          ? 'bg-gradient-to-r from-purple-900/30 to-indigo-900/30 border-purple-700/50'
           : 'bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-100'
       } rounded-2xl p-6 border`}>
         <h2 className={`text-xl font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Report Templates</h2>
@@ -386,7 +386,7 @@ const ReportsSection = ({ darkMode }) => {
               <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>High-level climate overview</p>
             </div>
           </button>
-          
+
           <button className={`flex items-center space-x-3 p-4 rounded-xl hover:shadow-md transition-all duration-200 text-left ${
             darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-white hover:bg-gray-50'
           }`}>
@@ -402,7 +402,7 @@ const ReportsSection = ({ darkMode }) => {
               <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Critical weather events</p>
             </div>
           </button>
-          
+
           <button className={`flex items-center space-x-3 p-4 rounded-xl hover:shadow-md transition-all duration-200 text-left ${
             darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-white hover:bg-gray-50'
           }`}>

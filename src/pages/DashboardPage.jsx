@@ -8,6 +8,7 @@ import ClimateAnalytics from '../components/dashboard/ClimateAnalytics';
 import AlertsManagement from '../components/dashboard/AlertsManagement';
 import UserManagement from '../components/dashboard/UserManagement';
 import ReportsSection from '../components/dashboard/ReportsSection';
+import AppuserReports from '../components/dashboard/AppuserReports';
 import SettingsPage from '../components/dashboard/SettingsPage';
 import MessagingDashboard from '../components/dashboard/MessagingDashboard';
 import ServicesManagement from '../components/dashboard/ServicesManagement';
@@ -68,10 +69,11 @@ const DashboardPage = () => {
   const adminMenuItems = [
     { id: 'users', name: 'User Management', icon: 'groups', description: 'Manage users & permissions' },
     { id: 'services', name: 'Services Management', icon: 'cloud', description: 'Manage Render services' },
+    { id: 'appuserreports', name: 'App User Reports', icon: 'database', description: 'View detailed user reports from MongoDB' },
   ];
 
-  // Combine menu items based on user role
-  const menuItems = user?.role === 'admin' 
+  // Combine menu items based on user access level (admin users see additional options)
+  const menuItems = (user?.role === 'admin' || user?.accessLevel === 'admin')
     ? [...baseMenuItems.slice(0, 4), ...adminMenuItems, ...baseMenuItems.slice(4)]
     : baseMenuItems;
 
@@ -94,6 +96,9 @@ const DashboardPage = () => {
       
       case 'services':
         return <ServicesManagement darkMode={darkMode} />;
+      
+      case 'appuserreports':
+        return <AppuserReports darkMode={darkMode} />;
       
       case 'reports':
         return <ReportsSection darkMode={darkMode} />;
