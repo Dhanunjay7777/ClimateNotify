@@ -72,11 +72,8 @@ const MessagingDashboard = ({ darkMode }) => {
     try {
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/messages?limit=5`);
       const data = await response.json();
-      
-      console.log('API Response:', data); // Debug log to see what we're getting
-      
+            
       if (data.status === 'success') {
-        console.log(`📨 Loaded ${data.data.length} messages from server`);
         setMessages(data.data);
       } else {
         console.error('Failed to load messages:', data.message);
