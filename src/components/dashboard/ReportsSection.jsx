@@ -460,30 +460,14 @@ const ReportsSection = ({ darkMode }) => {
 
   const shareReport = async (report) => {
     try {
-      // Create shareable link - use fileUrl if available, otherwise create a view link
-      let shareUrl = '';
-      let shareMessage = '';
-
-      if (report.fileUrl) {
-        // Direct link to the PDF file
-        shareUrl = report.fileUrl;
-        shareMessage = `🌍 Climate Report: ${report.title}\n\n📊 Type: ${report.type}\n📅 Period: ${report.period}\n🌐 Region: ${report.region}\n⏰ Generated: ${formatDate(report.generatedDate)}\n📦 Size: ${report.fileSize}\n\n🔗 View/Download Report:\n${shareUrl}`;
-      } else if (report.filePath) {
-        // Use file path
-        shareUrl = report.filePath;
-        shareMessage = `🌍 Climate Report: ${report.title}\n\n📊 Type: ${report.type}\n📅 Period: ${report.period}\n🌐 Region: ${report.region}\n⏰ Generated: ${formatDate(report.generatedDate)}\n📦 Size: ${report.fileSize}\n\n🔗 View/Download Report:\n${shareUrl}`;
-      } else {
-        // Create a reference link with report ID
-        shareUrl = `${window.location.origin}/reports/${report.id}`;
-        shareMessage = `🌍 Climate Report: ${report.title}\n\n📊 Type: ${report.type}\n📅 Period: ${report.period}\n🌐 Region: ${report.region}\n⏰ Generated: ${formatDate(report.generatedDate)}\n📦 Size: ${report.fileSize}\n\n🔗 View Report:\n${shareUrl}`;
-      }
+      // Get direct PDF link
+      const shareUrl = report.fileUrl || report.filePath || `${window.location.origin}/reports/${report.id}`;
 
       // Try Web Share API first (mobile devices)
       if (navigator.share && report.fileUrl) {
         try {
           await navigator.share({
-            title: `Climate Report: ${report.title}`,
-            text: `${report.type} report for ${report.region} - ${report.period}`,
+            title: report.title,
             url: shareUrl
           });
           return; // Success, exit early
@@ -497,8 +481,8 @@ const ReportsSection = ({ darkMode }) => {
         }
       }
 
-      // Fallback to clipboard copy
-      await navigator.clipboard.writeText(shareMessage);
+      // Fallback to clipboard copy - just copy the URL
+      await navigator.clipboard.writeText(shareUrl);
       
       // Show success message with custom styled alert
       const alertDiv = document.createElement('div');
@@ -511,8 +495,8 @@ const ReportsSection = ({ darkMode }) => {
               </svg>
             </div>
             <div style="flex: 1;">
-              <h3 style="color: ${darkMode ? '#ffffff' : '#111827'}; font-weight: 600; font-size: 16px; margin: 0 0 4px 0;">Report Link Copied!</h3>
-              <p style="color: ${darkMode ? '#9ca3af' : '#6b7280'}; font-size: 14px; margin: 0 0 8px 0;">Share this link to let others view or download the report.</p>
+              <h3 style="color: ${darkMode ? '#ffffff' : '#111827'}; font-weight: 600; font-size: 16px; margin: 0 0 4px 0;">Link Copied!</h3>
+              <p style="color: ${darkMode ? '#9ca3af' : '#6b7280'}; font-size: 14px; margin: 0 0 8px 0;">Share this link to view the report.</p>
               <a href="${shareUrl}" target="_blank" style="color: #3b82f6; font-size: 13px; text-decoration: underline; word-break: break-all;">
                 ${shareUrl.length > 60 ? shareUrl.substring(0, 60) + '...' : shareUrl}
               </a>
