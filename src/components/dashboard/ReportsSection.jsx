@@ -23,6 +23,10 @@ const ReportsSection = ({ darkMode }) => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isAdmin, setIsAdmin] = useState(null); // null = checking, false = not admin, true = admin
   const [userInfo, setUserInfo] = useState(null);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const reportsPerPage = 10;
 
   // Helper function to convert blob to base64
   const blobToBase64 = (blob) => {
@@ -456,36 +460,83 @@ const ReportsSection = ({ darkMode }) => {
 
   const shareReport = async (report) => {
     try {
-      if (navigator.share) {
-        // Use Web Share API if available
-        await navigator.share({
-          title: report.title,
-          text: `Climate Report: ${report.title} (${report.type}) - Generated on ${formatDate(report.generatedDate)}`,
-          url: window.location.origin
-        });
-      } else {
-        // Fallback to clipboard
-        const shareText = `Climate Report: ${report.title}
-Type: ${report.type}
-Period: ${report.period}
-Region: ${report.region}
-Generated: ${formatDate(report.generatedDate)}
-Size: ${report.fileSize}
+      // Create shareable link - use fileUrl if available, otherwise create a view link
+      let shareUrl = '';
+      let shareMessage = '';
 
-View this report at: ${window.location.origin}`;
-        
-        await navigator.clipboard.writeText(shareText);
-        alert('Report details copied to clipboard!');
+      if (report.fileUrl) {
+        // Direct link to the PDF file
+        shareUrl = report.fileUrl;
+        shareMessage = `🌍 Climate Report: ${report.title}\n\n📊 Type: ${report.type}\n📅 Period: ${report.period}\n🌐 Region: ${report.region}\n⏰ Generated: ${formatDate(report.generatedDate)}\n📦 Size: ${report.fileSize}\n\n🔗 View/Download Report:\n${shareUrl}`;
+      } else if (report.filePath) {
+        // Use file path
+        shareUrl = report.filePath;
+        shareMessage = `🌍 Climate Report: ${report.title}\n\n📊 Type: ${report.type}\n📅 Period: ${report.period}\n🌐 Region: ${report.region}\n⏰ Generated: ${formatDate(report.generatedDate)}\n📦 Size: ${report.fileSize}\n\n🔗 View/Download Report:\n${shareUrl}`;
+      } else {
+        // Create a reference link with report ID
+        shareUrl = `${window.location.origin}/reports/${report.id}`;
+        shareMessage = `🌍 Climate Report: ${report.title}\n\n📊 Type: ${report.type}\n📅 Period: ${report.period}\n🌐 Region: ${report.region}\n⏰ Generated: ${formatDate(report.generatedDate)}\n📦 Size: ${report.fileSize}\n\n🔗 View Report:\n${shareUrl}`;
       }
+
+      // Try Web Share API first (mobile devices)
+      if (navigator.share && report.fileUrl) {
+        try {
+          await navigator.share({
+            title: `Climate Report: ${report.title}`,
+            text: `${report.type} report for ${report.region} - ${report.period}`,
+            url: shareUrl
+          });
+          return; // Success, exit early
+        } catch (shareError) {
+          // User cancelled or share failed, continue to clipboard fallback
+          if (shareError.name !== 'AbortError') {
+            console.log('Share API failed, falling back to clipboard');
+          } else {
+            return; // User cancelled, don't show clipboard message
+          }
+        }
+      }
+
+      // Fallback to clipboard copy
+      await navigator.clipboard.writeText(shareMessage);
+      
+      // Show success message with custom styled alert
+      const alertDiv = document.createElement('div');
+      alertDiv.innerHTML = `
+        <div style="position: fixed; top: 20px; right: 20px; z-index: 9999; max-width: 400px; background: ${darkMode ? '#1f2937' : '#ffffff'}; border: 2px solid ${darkMode ? '#3b82f6' : '#2563eb'}; border-radius: 12px; padding: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+          <div style="display: flex; align-items: start; gap: 12px;">
+            <div style="background: ${darkMode ? '#1e40af' : '#dbeafe'}; border-radius: 8px; padding: 8px; flex-shrink: 0;">
+              <svg style="width: 24px; height: 24px; color: ${darkMode ? '#60a5fa' : '#2563eb'};" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+            </div>
+            <div style="flex: 1;">
+              <h3 style="color: ${darkMode ? '#ffffff' : '#111827'}; font-weight: 600; font-size: 16px; margin: 0 0 4px 0;">Report Link Copied!</h3>
+              <p style="color: ${darkMode ? '#9ca3af' : '#6b7280'}; font-size: 14px; margin: 0 0 8px 0;">Share this link to let others view or download the report.</p>
+              <a href="${shareUrl}" target="_blank" style="color: #3b82f6; font-size: 13px; text-decoration: underline; word-break: break-all;">
+                ${shareUrl.length > 60 ? shareUrl.substring(0, 60) + '...' : shareUrl}
+              </a>
+            </div>
+            <button onclick="this.parentElement.parentElement.remove()" style="background: none; border: none; color: ${darkMode ? '#9ca3af' : '#6b7280'}; cursor: pointer; padding: 4px; flex-shrink: 0;">
+              <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(alertDiv);
+      
+      // Auto-remove after 5 seconds
+      setTimeout(() => {
+        alertDiv.remove();
+      }, 5000);
+
     } catch (error) {
-      // Final fallback - create a shareable link
-      const shareUrl = `${window.location.origin}?report=${encodeURIComponent(report.title)}`;
-      try {
-        await navigator.clipboard.writeText(shareUrl);
-        alert('Share link copied to clipboard!');
-      } catch (clipboardError) {
-        alert(`Share this report: ${shareUrl}`);
-      }
+      console.error('Share failed:', error);
+      // Final fallback - show the URL in an alert
+      const shareUrl = report.fileUrl || report.filePath || `${window.location.origin}/reports/${report.id}`;
+      alert(`Copy this link to share:\n\n${shareUrl}`);
     }
   };
 
@@ -555,6 +606,24 @@ View this report at: ${window.location.origin}`;
       default: return darkMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-800';
     }
   };
+
+  // Pagination calculations
+  const totalPages = Math.ceil(recentReports.length / reportsPerPage);
+  const indexOfLastReport = currentPage * reportsPerPage;
+  const indexOfFirstReport = indexOfLastReport - reportsPerPage;
+  const currentReports = recentReports.slice(indexOfFirstReport, indexOfLastReport);
+
+  // Handle page change
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+    // Scroll to top of reports table
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Reset to page 1 when reports change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [recentReports.length]);
 
   return (
     <div className="space-y-8">
@@ -754,7 +823,7 @@ View this report at: ${window.location.origin}`;
                   </td>
                 </tr>
               ) : (
-                recentReports.map(report => (
+                currentReports.map(report => (
                 <tr key={report.id} className={`transition-colors ${
                   darkMode ? 'hover:bg-gray-700/50' : 'hover:bg-gray-50'
                 }`}>
@@ -823,6 +892,102 @@ View this report at: ${window.location.origin}`;
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Controls */}
+        {recentReports.length > reportsPerPage && (
+          <div className={`px-6 py-4 border-t ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}>
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              {/* Pagination Info */}
+              <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                Showing <span className="font-medium">{indexOfFirstReport + 1}</span> to{' '}
+                <span className="font-medium">{Math.min(indexOfLastReport, recentReports.length)}</span> of{' '}
+                <span className="font-medium">{recentReports.length}</span> reports
+              </div>
+
+              {/* Pagination Buttons */}
+              <div className="flex items-center space-x-2">
+                {/* Previous Button */}
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className={`px-3 py-2 rounded-lg font-medium transition-colors ${
+                    currentPage === 1
+                      ? darkMode
+                        ? 'bg-gray-800 text-gray-600 cursor-not-allowed'
+                        : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      : darkMode
+                      ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+
+                {/* Page Numbers */}
+                <div className="flex items-center space-x-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => {
+                    // Show first page, last page, current page, and pages around current
+                    if (
+                      pageNum === 1 ||
+                      pageNum === totalPages ||
+                      (pageNum >= currentPage - 1 && pageNum <= currentPage + 1)
+                    ) {
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => handlePageChange(pageNum)}
+                          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                            currentPage === pageNum
+                              ? 'bg-blue-600 text-white'
+                              : darkMode
+                              ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    } else if (
+                      (pageNum === currentPage - 2 && currentPage > 3) ||
+                      (pageNum === currentPage + 2 && currentPage < totalPages - 2)
+                    ) {
+                      return (
+                        <span
+                          key={pageNum}
+                          className={`px-2 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}
+                        >
+                          ...
+                        </span>
+                      );
+                    }
+                    return null;
+                  })}
+                </div>
+
+                {/* Next Button */}
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className={`px-3 py-2 rounded-lg font-medium transition-colors ${
+                    currentPage === totalPages
+                      ? darkMode
+                        ? 'bg-gray-800 text-gray-600 cursor-not-allowed'
+                        : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      : darkMode
+                      ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Report Templates */}
