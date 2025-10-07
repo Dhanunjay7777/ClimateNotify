@@ -96,7 +96,7 @@ const AppuserReports = ({ darkMode }) => {
     } catch (err) {
       console.error('Error fetching reports:', err);
       const errorMessage = err.message.includes('fetch') 
-        ? `Cannot connect to server at ${API_BASE_URL}. Make sure the server is running.`
+        ? `Cannot connect to server. Make sure the server is running.`
         : err.message;
       setError(errorMessage);
       return null;
