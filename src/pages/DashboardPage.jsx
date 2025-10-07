@@ -12,6 +12,7 @@ import AppuserReports from '../components/dashboard/AppuserReports';
 import SettingsPage from '../components/dashboard/SettingsPage';
 import MessagingDashboard from '../components/dashboard/MessagingDashboard';
 import ServicesManagement from '../components/dashboard/ServicesManagement';
+import SMSNotificationDashboard from '../components/dashboard/SMSNotificationDashboard';
 
 const DashboardPage = () => {
   const { user, logout } = useAuth();
@@ -68,6 +69,7 @@ const DashboardPage = () => {
   // Admin-only menu items
   const adminMenuItems = [
     { id: 'users', name: 'User Management', icon: 'groups', description: 'Manage users & permissions' },
+    { id: 'sms', name: 'SMS Notifications', icon: 'message', description: 'Send SMS alerts to users' },
     { id: 'services', name: 'Services Management', icon: 'cloud', description: 'Manage Render services' },
     { id: 'appuserreports', name: 'App User Reports', icon: 'database', description: 'View detailed user reports from MongoDB' },
   ];
@@ -93,6 +95,9 @@ const DashboardPage = () => {
       
       case 'users':
         return <UserManagement darkMode={darkMode} />;
+      
+      case 'sms':
+        return <SMSNotificationDashboard darkMode={darkMode} />;
       
       case 'services':
         return <ServicesManagement darkMode={darkMode} />;
