@@ -25,9 +25,6 @@ const SMSNotificationDashboard = ({ darkMode }) => {
   const SMS_SINGLE_LIMIT = parseInt(import.meta.env.VITE_SMS_SINGLE_LIMIT);
   const SMS_MULTI_LIMIT = parseInt(import.meta.env.VITE_SMS_MULTI_LIMIT);
 
-  // Check if user is admin (same as UserManagement)
-  const isAdmin = user?.labels?.includes('admin') || user?.accessLevel === 'admin';
-
   // Update character count and SMS parts
   useEffect(() => {
     const length = message.length;
@@ -204,10 +201,8 @@ const SMSNotificationDashboard = ({ darkMode }) => {
   };
 
   useEffect(() => {
-    if (isAdmin) {
-      loadSMSHistory();
-    }
-  }, [isAdmin]);
+    loadSMSHistory();
+  }, []);
 
   useEffect(() => {
     if (phoneSource === 'database' && allUsers.length === 0) {
@@ -278,21 +273,23 @@ const SMSNotificationDashboard = ({ darkMode }) => {
     msg.phoneNumber?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Admin access check - same as UserManagement
-  if (!isAdmin) {
+  // Check admin access - same as UserManagement
+  if (!user || (user.role !== 'admin' && user.accessLevel !== 'admin')) {
     return (
-      <div className="p-6">
-        <div className={`rounded-2xl shadow-xl border p-12 text-center ${
-          darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
+      <div className="flex items-center justify-center h-64">
+        <div className={`text-center p-8 rounded-2xl border ${
+          darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
         }`}>
-          <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <span className="material-icons text-red-600 text-4xl">block</span>
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728" />
+            </svg>
           </div>
-          <h2 className={`text-2xl font-bold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+          <h2 className={`text-xl font-bold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
             Access Denied
           </h2>
-          <p className={`text-lg ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-            SMS Notification Dashboard is only accessible to administrators.
+          <p className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+            You need administrator privileges to access this resource.
           </p>
         </div>
       </div>

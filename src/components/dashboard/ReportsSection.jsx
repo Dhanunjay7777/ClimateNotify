@@ -73,8 +73,6 @@ const ReportsSection = ({ darkMode }) => {
       
       if (hasAdminAccess && consumerID) {
         setConsumerId(consumerID);
-      } else {
-        console.log('❌ User does not have admin access');
       }
       
     } catch (error) {
@@ -201,7 +199,7 @@ const ReportsSection = ({ darkMode }) => {
       const result = await response.json();
       return result.data;
     } catch (error) {
-      console.error('❌ Failed to save to database:', error);
+      console.error('Failed to save to database:', error);
       throw error;
     }
   };
@@ -447,7 +445,7 @@ const ReportsSection = ({ darkMode }) => {
       setRecentReports(updatedReports);
       updateMetrics();
     } catch (error) {
-      console.error('❌ Failed to delete report:', error);
+      console.error('Failed to delete report:', error);
       alert('Failed to delete report: ' + error.message);
     }
   };
